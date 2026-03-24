@@ -1,0 +1,97 @@
+## ===========================
+## .NET / C# Project .gitignore
+## ===========================
+
+# Build output directories
+bin/
+obj/
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+# Restore the NuGet packages on build (not needed in source control)
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ===========================
+# Visual Studio / Rider / VS Code
+# ===========================
+
+# VS Solution user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio hidden folders
+.vs/
+.vscode/
+
+# Rider IDE
+.idea/
+*.rider.user
+
+# ===========================
+# SQLite / Local Database Files
+# ===========================
+
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ===========================
+# Output / Log Files
+# ===========================
+
+output.txt
+*.log
+logs/
+
+# ===========================
+# OS-Generated Files
+# ===========================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ===========================
+# Sensitive / Environment Files
+# ===========================
+
+.env
+.env.*
+appsettings.Development.json
+secrets.json
+
+# ===========================
+# Test Results
+# ===========================
+
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# ===========================
+# Publish Output
+# ===========================
+
+**/publish/
+**/PublishProfiles/
