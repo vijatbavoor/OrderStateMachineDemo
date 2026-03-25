@@ -6,11 +6,25 @@
 A **C# .NET 8 console application** demonstrating an **event-driven state machine** for managing order lifecycles using the [Stateless](https://github.com/dotnet-state-machine/stateless) library. Features persistence with **EF Core + SQLite** and **domain events**.
 
 ## 🚀 Features
-- **State Machine**: Full order workflow with 8 states and conditional transitions (e.g., payment retries up to 3x).
-- **Persistence**: SQLite DB via EF Core; state/payment attempts auto-saved on transitions.
+- **State Machine**: Full order workflow with 8 states and conditional transitions (e.g., payment retries up to 3x, **real stock check** querying DB Stock table).
+- **Persistence**: SQLite DB via EF Core; state/payment attempts/requiredQuantity auto-saved. **Cancel deletes order entry**.
 - **Domain Events**: Publishes `PaymentFailedEvent`, `OrderShippedEvent`, `OrderDeliveredEvent`.
 - **Interactive Demo**: Simulates complete workflow in `Program.cs` (fresh DB each run).
 - **Robust**: Invalid triggers ignored; detailed console logging.
+
+**Stateless Key Points:**
+Here’s a **brief summary** of what we covered:
+
+- **`.OnEntry`** → Runs every time you enter a state, in the order registered, sequentially.  
+- **`.OnEntryFrom`** → Runs only when entering from a specific trigger/state, after `.OnEntry`. (Used for stock check on CheckStock).  
+- **Multiple `.OnEntry`** → Executed **sequentially**, not in parallel.  
+- **Async work** → You must explicitly start it:
+  - `Task.Run(...)` → fire-and-forget background work.  
+  - `async/await` → makes the transition wait until the async work completes.  
+- **Mixing `.OnEntry` and `.OnEntryFrom`** → General `.OnEntry` actions run first, then the matching `.OnEntryFrom`.  
+- **Best practice** → Use async delegates for predictable sequencing; use `Task.WhenAll` if you want parallel async tasks inside a single entry action.  
+
+👉 In short: **deterministic, sequential by default — parallel only if you explicitly code it.**
 
 ## 🏗️ Architecture
 ```
@@ -57,8 +71,11 @@ Final State : Delivered
 Done. ✅
 ```
 
-## 📊 State Diagram (Mermaid)
-Copy to [mermaid.live](https://mermaid.live) for visual:
+## 📊 State Diagram
+
+![State Diagram](State Diagram.png =300x200)
+
+**Interactive Mermaid** (copy to [mermaid.live](https://mermaid.live)):
 
 ```mermaid
 stateDiagram-v2
@@ -69,8 +86,8 @@ stateDiagram-v2
     StockChecked --> PaymentPending : PaymentFailed
     StockChecked --> Cancelled : Cancel
     PaymentPending --> PaymentCompleted : PaymentSuccess
-    PaymentPending --> PaymentPending : PaymentFailed < 3
     PaymentPending --> Cancelled : PaymentFailed >=3 / Cancel
+    PaymentPending --> PaymentPending : PaymentFailed < 3  
     PaymentCompleted --> AddressValidated : AddressValid
     PaymentCompleted --> Cancelled : AddressInvalid / Cancel
     AddressValidated --> Shipped : Ship
@@ -79,6 +96,9 @@ stateDiagram-v2
     Cancelled --> [*]
     Delivered --> [*]
 ```
+
+<img src="StateDiagram.png" alt="Description" width="800" height="700">
+
 
 ## 📦 Dependencies
 | Package | Version | Purpose |
