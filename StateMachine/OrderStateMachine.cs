@@ -20,6 +20,8 @@ public class OrderStateMachine
 
     private OrderState _currentState;
     private int _paymentAttempts;
+    private int _stockId = 1;
+    private int _requiredQuantity;
 
     // ── Public read properties ──────────────────────────────────────────────
     public OrderState CurrentState => _currentState;
@@ -68,6 +70,7 @@ public class OrderStateMachine
         _machine.Configure(OrderState.Created)
             .Permit(OrderTrigger.CheckStock, OrderState.StockChecked)
             .Permit(OrderTrigger.Cancel, OrderState.Cancelled)
+            .OnEntryFrom(OrderTrigger.CheckStock, DoStockCheck)
             .OnEntry(() => Console.WriteLine("[State] Order created."));
 
         // StockChecked → PaymentPending (first failure) or PaymentCompleted
@@ -116,7 +119,8 @@ public class OrderStateMachine
         _machine.Configure(OrderState.Delivered)
             .OnEntry(OnDelivered);
 
-        _machine.Configure(OrderState.Cancelled)
+_machine.Configure(OrderState.Cancelled)
+            //.OnEntry(DeleteOrderFromDb)
             .OnEntry(() => Console.WriteLine("[State] Order CANCELLED."));
     }
 
@@ -148,6 +152,29 @@ public class OrderStateMachine
         PublishEvent(new OrderDeliveredEvent(_orderId));
     }
 
+    private void DoStockCheck()
+    {
+        var stock = _db.Stock.Find(_stockId);
+        if (stock == null)
+        {
+            Console.WriteLine($"[StockCheck] FAIL: No stock found for StockId={_stockId}");
+            return;
+        }
+        bool isSufficient = stock.Quantity >= _requiredQuantity;
+        Console.WriteLine($"[StockCheck] StockId={_stockId}: available={stock.Quantity}, required={_requiredQuantity} → {(isSufficient ? "PASS ✅" : "FAIL ❌")}");
+    }
+
+    private void DeleteOrderFromDb()
+    {
+        var entity = _db.Orders.Find(_orderId);
+        if (entity != null)
+        {
+            _db.Orders.Remove(entity);
+            _db.SaveChanges();
+            Console.WriteLine($"[DB] Deleted cancelled order #{_orderId} from DB.");
+        }
+    }
+
     // ── Domain events ───────────────────────────────────────────────────────
 
     private void PublishEvent(DomainEvent evt)
@@ -160,24 +187,41 @@ public class OrderStateMachine
 
     private void LoadOrSeedOrder()
     {
-        _db.Database.EnsureCreated();
+_db.Database.EnsureCreated();
 
         var entity = _db.Orders.Find(_orderId);
         if (entity is null)
         {
             // First run — seed the entity
-            entity = new OrderEntity { Id = _orderId, State = OrderState.Created.ToString(), PaymentAttempts = 0 };
+            entity = new OrderEntity 
+            { 
+                Id = _orderId, 
+                State = OrderState.Created.ToString(), 
+                PaymentAttempts = 0,
+                RequiredQuantity = 2
+            };
             _db.Orders.Add(entity);
             _db.SaveChanges();
             Console.WriteLine($"[DB] New order seeded — Id={_orderId}");
         }
         else
         {
-            Console.WriteLine($"[DB] Order reloaded from DB — Id={_orderId}, State={entity.State}, PaymentAttempts={entity.PaymentAttempts}");
+            Console.WriteLine($"[DB] Order reloaded from DB — Id={_orderId}, State={entity.State}, PaymentAttempts={entity.PaymentAttempts}, RequiredQuantity={entity.RequiredQuantity}");
+        }
+
+        // Seed stock if not exists
+        var stockExists = _db.Stock.Any(s => s.StockId == _stockId);
+        if (!stockExists)
+        {
+            var stock = new StockEntity { StockId = _stockId, Quantity = 10 };
+            _db.Stock.Add(stock);
+            _db.SaveChanges();
+            Console.WriteLine($"[DB] Stock seeded — StockId={_stockId}, Quantity=10");
         }
 
         _currentState   = Enum.Parse<OrderState>(entity.State);
         _paymentAttempts = entity.PaymentAttempts;
+        _requiredQuantity = entity.RequiredQuantity;
     }
 
     private void PersistState()
@@ -189,6 +233,6 @@ public class OrderStateMachine
         entity.PaymentAttempts = _paymentAttempts;
         _db.SaveChanges();
 
-        Console.WriteLine($"[DB] Persisted — State={entity.State}, PaymentAttempts={entity.PaymentAttempts}");
+        Console.WriteLine($"[DB] Persisted — State={entity.State}, PaymentAttempts={entity.PaymentAttempts}, RequiredQuantity={entity.RequiredQuantity}");
     }
 }

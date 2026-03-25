@@ -12,4 +12,7 @@ public class OrderEntity
 
     /// <summary>Number of payment attempts made so far.</summary>
     public int PaymentAttempts { get; set; } = 0;
+
+    /// <summary>Required quantity for stock check.</summary>
+    public int RequiredQuantity { get; set; } = 5;
 }

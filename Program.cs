@@ -1,6 +1,7 @@
 using OrderStateMachineDemo.Domain;
 using OrderStateMachineDemo.Persistence;
 using OrderStateMachineDemo.StateMachine;
+using System;
 
 // ─── Banner ──────────────────────────────────────────────────────────────────
 Console.WriteLine("╔══════════════════════════════════════════════════════╗");
@@ -8,7 +9,8 @@ Console.WriteLine("║     Order State Machine Demo — Event-Driven Demo     �
 Console.WriteLine("╚══════════════════════════════════════════════════════╝");
 Console.WriteLine();
 
-const int OrderId = 1;
+//int OrderId = new Random().Next(1000, 10000);
+int OrderId = 1;
 
 // ─── Clean up previous run so we always start fresh ──────────────────────────
 if (File.Exists("orders.db"))
